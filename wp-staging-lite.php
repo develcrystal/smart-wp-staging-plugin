@@ -4,8 +4,8 @@
  * Plugin URI:        https://example.com/wp-staging-lite
  * Description:       Lightweight plugin to create 1-click staging environments, manual backups, debug logging, and search engine protection.
  * Version:           1.0.2
- * Author:            Your Name
- * Author URI:        https://example.com
+ * Author:            Romain Hill, AI Developer
+ * Author URI:        https://github.com/develcrystal
  * Text Domain:       wp-staging-lite
  * Domain Path:       /languages
  * License:           GPL2
