@@ -59,6 +59,7 @@ function wpstaging_admin_page() {
 
 // 3. Staging anlegen (Dummy-Logik)
 function wpstaging_create_staging() {
+    wpstaging_log('Staging-Umgebung angelegt (Demo).');
     echo '<div class="notice notice-success"><p>Staging-Umgebung wurde (Demo) angelegt. Schutz gegen Suchmaschinen ist aktiv!</p></div>';
     // Hier: Klonen von Dateien/DB, Setzen von WP_STAGING_MODE, robots.txt, etc.
 }
@@ -75,10 +76,13 @@ function wpstaging_backup_overview() {
     echo '</form>';
     if (isset($_POST['wpstaging_save_excludes'])) {
         update_option('wpstaging_backup_excludes', sanitize_textarea_field($_POST['wpstaging_excludes']));
+        wpstaging_log('Backup-Excludes gespeichert: ' . str_replace("\n", ", ", sanitize_textarea_field($_POST['wpstaging_excludes'])));
         echo '<div class="updated"><p>Excludes gespeichert!</p></div>';
     }
     // (Demo) Backup-Liste anzeigen
     echo '<ul><li>Backup vom 16.04.2025 (Demo)</li></ul>';
+    echo '<h3>Debug-Log</h3>';
+    echo '<pre style="background:#222;color:#0f0;max-height:200px;overflow:auto;">' . esc_html(wpstaging_get_log()) . '</pre>';
 }
 
 // 5. Helper: Staging-Modus erkennen
@@ -86,3 +90,28 @@ function wpstaging_is_staging() {
     // In echter Logik: z.B. per Konstante in wp-config.php oder anhand der URL
     return defined('WP_STAGING_MODE') && WP_STAGING_MODE === true;
 }
+
+// 6. Debugging & Logging
+function wpstaging_log($msg) {
+    $upload_dir = wp_upload_dir();
+    $log_dir = $upload_dir['basedir'] . '/wpstaging-logs';
+    if (!file_exists($log_dir)) {
+        wp_mkdir_p($log_dir);
+    }
+    $log_file = $log_dir . '/debug.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $entry = "[$timestamp] $msg\n";
+    file_put_contents($log_file, $entry, FILE_APPEND);
+}
+
+function wpstaging_get_log() {
+    $upload_dir = wp_upload_dir();
+    $log_file = $upload_dir['basedir'] . '/wpstaging-logs/debug.log';
+    if (file_exists($log_file)) {
+        $lines = file($log_file);
+        $last = array_slice($lines, -20); // Zeige die letzten 20 Einträge
+        return implode('', $last);
+    }
+    return 'Noch keine Log-Einträge.';
+}
+
