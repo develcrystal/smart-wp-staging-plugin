@@ -34,81 +34,118 @@ function wpstaging_lite_add_menu() {
 }
 
 function wpstaging_lite_render_page() {
+    $locale = get_locale();
+    $step = isset($_GET['wpstaging_step']) ? intval($_GET['wpstaging_step']) : 1;
+    $step = max(1, min($step, 4)); // nur 1-4 zulassen
+    $base_url = admin_url('admin.php?page=wp-staging-lite');
+    $step_labels = [
+        'de' => ['Staging erstellen', 'Excludes verwalten', 'Debug Log prüfen', 'Staging testen'],
+        'en' => ['Create Staging', 'Manage Excludes', 'Check Debug Log', 'Test Staging']
+    ];
+    $lang = (strpos($locale, 'de_') === 0) ? 'de' : 'en';
+    $labels = $step_labels[$lang];
+    
     ?>
     <div class="wrap">
         <h1>WP Staging Lite</h1>
+        <style>
+        .wpstaging-stepper {display:flex;gap:8px;margin:24px 0 28px 0;}
+        .wpstaging-step {padding:6px 16px;border-radius:16px;border:1px solid #b6daff;background:#eaf6ff;color:#222;opacity:0.7;}
+        .wpstaging-step.active {background:#007cba;color:#fff;opacity:1;}
+        .wpstaging-step.done {background:#b6daff;color:#222;opacity:1;}
+        .wpstaging-stepper-hr {border:0;border-top:1.5px solid #b6daff;margin:0 0 24px 0;}
+        .wpstaging-step-content {max-width:700px;padding:24px 32px 32px 32px;background:#f8f8f8;border-radius:10px;border:1px solid #eaf6ff;box-shadow:0 2px 8px #eaf6ff44;}
+        .wpstaging-step-nav {margin-top:24px;display:flex;gap:8px;}
+        </style>
+        <div class="wpstaging-stepper">
+        <?php for($i=1;$i<=4;$i++): ?>
+            <div class="wpstaging-step<?php echo ($step==$i)?' active':(($step>$i)?' done':''); ?>">Step <?php echo $i; ?>: <?php echo esc_html($labels[$i-1]); ?></div>
+        <?php endfor; ?>
+        </div>
+        <div class="wpstaging-stepper-hr"></div>
+        <div class="wpstaging-step-content">
         <?php
-        $locale = get_locale();
-        if (strpos($locale, 'de_') === 0) {
-        ?>
-        <div style="background:#eaf6ff;border:1px solid #b6daff;padding:15px 20px;margin-bottom:20px;max-width:800px;">
-            <strong>Was macht dieses Plugin?</strong><br>
-            <ul style="margin:8px 0 0 20px;">
-                <li><b>1‑Klick‑Staging:</b> Erstelle eine sichere Kopie deiner Website zum Testen und Entwickeln – ohne Risiko für die Live-Seite.</li>
-                <li><b>Backup-Excludes:</b> Schließe bestimmte Ordner/Dateien von Backups und Staging aus (z.B. <code>wp-content/cache/</code>).</li>
-                <li><b>Debug-Logging:</b> Alle wichtigen Aktionen und Fehler werden in <code>wp-content/uploads/wpstaging-logs/debug.log</code> protokolliert und sind unten einsehbar.</li>
-                <li><b>Suchmaschinen-Schutz:</b> Die Staging-Umgebung wird automatisch für Suchmaschinen gesperrt (robots.txt, Meta-Tag).</li>
-            </ul>
-            <div style="margin-top:10px;color:#444;">
-                <b>So funktioniert's:</b> <br>
-                <ol style="margin:8px 0 0 20px;">
-                    <li><b>Staging erstellen</b>: Button klicken – Verzeichnis und Schutzdateien werden automatisch angelegt.</li>
-                    <li><b>Excludes pflegen</b>: Trage auszuschließende Pfade ein und speichere sie. Änderungen werden geloggt.</li>
-                    <li><b>Log prüfen</b>: Fehler und Aktionen werden unten angezeigt.</li>
-                </ol>
-            </div>
-        </div>
-        <?php } else { ?>
-        <div style="background:#eaf6ff;border:1px solid #b6daff;padding:15px 20px;margin-bottom:20px;max-width:800px;">
-            <strong>What does this plugin do?</strong><br>
-            <ul style="margin:8px 0 0 20px;">
-                <li><b>1-click staging:</b> Create a safe copy of your website for testing and development – without risk to your live site.</li>
-                <li><b>Backup Excludes:</b> Exclude certain folders/files from backups and staging (e.g. <code>wp-content/cache/</code>).</li>
-                <li><b>Debug logging:</b> All important actions and errors are logged to <code>wp-content/uploads/wpstaging-logs/debug.log</code> and shown below.</li>
-                <li><b>Search engine protection:</b> The staging environment is automatically protected from search engines (robots.txt, meta tag).</li>
-            </ul>
-            <div style="margin-top:10px;color:#444;">
-                <b>How it works:</b> <br>
-                <ol style="margin:8px 0 0 20px;">
-                    <li><b>Create staging</b>: Click the button – directory and protection files are created automatically.</li>
-                    <li><b>Manage excludes</b>: Enter paths to exclude and save. All changes are logged.</li>
-                    <li><b>Check log</b>: Errors and actions are shown below.</li>
-                </ol>
-            </div>
-        </div>
-        <?php } ?>
-        <?php if ( isset($_GET['created']) && $_GET['created'] === '1' ) : ?>
-            <div class="notice notice-success is-dismissible">
-                <p>Staging-Umgebung erfolgreich erstellt.</p>
-            </div>
-        <?php endif; ?>
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <?php wp_nonce_field('wpstaging_lite_create', 'wpstaging_lite_nonce'); ?>
+        // Schritt 1: Staging erstellen
+        if($step==1){
+            if($lang=="de"){
+                echo "<h2>Staging-Umgebung erstellen</h2><p>Mit einem Klick wird eine Staging-Kopie deiner Website angelegt. Diese ist für Suchmaschinen gesperrt und kann gefahrlos getestet werden.</p>";
+            }else{
+                echo "<h2>Create Staging Environment</h2><p>With one click, a staging copy of your site will be created. It is protected from search engines and safe for testing.</p>";
+            }
+            echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'">
+            '.wp_nonce_field('wpstaging_lite_create', 'wpstaging_lite_nonce', true, false).'
             <input type="hidden" name="action" value="wpstaging_lite_create">
-            <p><input type="submit" class="button button-primary" value="Staging erstellen"></p>
-        </form>
-        <hr>
-        <h2>Backup Excludes</h2>
-        <?php if ( isset($_GET['excludes_saved']) && $_GET['excludes_saved'] === '1' ) : ?>
-            <div class="notice notice-success is-dismissible"><p>Excludes erfolgreich gespeichert.</p></div>
-        <?php elseif ( isset($_GET['excludes_error']) && $_GET['excludes_error'] === '1' ) : ?>
-            <div class="notice notice-error is-dismissible"><p>Fehler beim Speichern der Excludes!</p></div>
-        <?php elseif ( isset($_GET['excludes_empty']) && $_GET['excludes_empty'] === '1' ) : ?>
-            <div class="notice notice-warning is-dismissible"><p>Bitte mindestens einen Exclude eintragen.</p></div>
-        <?php endif; ?>
-        <form id="wpstaging-lite-excludes-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <?php wp_nonce_field('wpstaging_lite_excludes', 'wpstaging_lite_excludes_nonce'); ?>
-            <input type="hidden" name="action" value="wpstaging_lite_excludes">
-            <textarea name="wpstaging_lite_excludes" rows="3" cols="60"><?php echo esc_textarea(get_option('wpstaging_lite_excludes', '')); ?></textarea><br>
-            <small>Einträge durch Zeilenumbruch trennen (z.B. <code>wp-content/cache/</code>)</small><br>
-            <button type="submit" class="button"><span id="wpstaging-lite-spinner" style="display:none;margin-right:6px;">⏳</span>Excludes speichern</button>
-        </form>
-        <script>
-        document.getElementById('wpstaging-lite-excludes-form').addEventListener('submit', function() {
-            document.getElementById('wpstaging-lite-spinner').style.display = 'inline-block';
-        });
-        </script>
-        <hr>
+            <p><input type="submit" class="button button-primary" value="'.esc_attr($labels[0]).'"></p>
+            </form>';
+            if(isset($_GET['created']) && $_GET['created']==='1'){
+                if($lang=="de"){
+                    echo '<div class="notice notice-success is-dismissible" style="margin-top:16px;"><p>Staging-Umgebung erfolgreich erstellt.<br>Verzeichnis: <code>/wp-content/uploads/wpstaging/</code><br>Dateien: <code>robots.txt</code>, <code>index.html</code>.<br>Weiter mit Schritt 2!</p></div>';
+                }else{
+                    echo '<div class="notice notice-success is-dismissible" style="margin-top:16px;"><p>Staging environment created successfully.<br>Directory: <code>/wp-content/uploads/wpstaging/</code><br>Files: <code>robots.txt</code>, <code>index.html</code>.<br>Continue with step 2!</p></div>';
+                }
+            }
+        }
+        // Schritt 2: Excludes verwalten
+        if($step==2){
+            if($lang=="de"){
+                echo "<h2>Backup Excludes verwalten</h2><p>Hier kannst du Dateien oder Ordner angeben, die beim Staging/Backup ausgeschlossen werden sollen (je Zeile ein Pfad).</p>";
+            }else{
+                echo "<h2>Manage Backup Excludes</h2><p>Specify files or folders to exclude from staging/backup (one path per line).</p>";
+            }
+            echo '<form id="wpstaging-lite-excludes-form" method="post" action="'.esc_url(admin_url('admin-post.php')).'">
+                '.wp_nonce_field('wpstaging_lite_excludes', 'wpstaging_lite_excludes_nonce', true, false).'
+                <input type="hidden" name="action" value="wpstaging_lite_excludes">
+                <textarea name="wpstaging_lite_excludes" rows="3" cols="60">'.esc_textarea(get_option('wpstaging_lite_excludes', '')).'</textarea><br>
+                <small>'.($lang=="de"?"Einträge durch Zeilenumbruch trennen (z.B. <code>wp-content/cache/</code>)":"Separate entries by line break (e.g. <code>wp-content/cache/</code>)").'</small><br>
+                <button type="submit" class="button"><span id="wpstaging-lite-spinner" style="display:none;margin-right:6px;">⏳</span>'.esc_html($labels[1]).'</button>
+            </form>';
+            echo '<script>document.getElementById("wpstaging-lite-excludes-form").addEventListener("submit",function(){document.getElementById("wpstaging-lite-spinner").style.display="inline-block";});</script>';
+            if(isset($_GET['excludes_saved']) && $_GET['excludes_saved']==='1'){
+                echo '<div class="notice notice-success is-dismissible" style="margin-top:16px;"><p>'.($lang=="de"?"Excludes erfolgreich gespeichert.":"Excludes saved successfully.").'</p></div>';
+            }elseif(isset($_GET['excludes_error']) && $_GET['excludes_error']==='1'){
+                echo '<div class="notice notice-error is-dismissible" style="margin-top:16px;"><p>'.($lang=="de"?"Fehler beim Speichern der Excludes!":"Error saving excludes!").'</p></div>';
+            }elseif(isset($_GET['excludes_empty']) && $_GET['excludes_empty']==='1'){
+                echo '<div class="notice notice-warning is-dismissible" style="margin-top:16px;"><p>'.($lang=="de"?"Bitte mindestens einen Exclude eintragen.":"Please enter at least one exclude.").'</p></div>';
+            }
+        }
+        // Schritt 3: Debug Log prüfen
+        if($step==3){
+            if($lang=="de"){
+                echo "<h2>Debug Log prüfen</h2><p>Hier werden alle wichtigen Aktionen und Fehler angezeigt. Das Logfile findest du auch unter <code>wp-content/uploads/wpstaging-logs/debug.log</code>.</p>";
+            }else{
+                echo "<h2>Check Debug Log</h2><p>All important actions and errors are listed here. You can also find the logfile at <code>wp-content/uploads/wpstaging-logs/debug.log</code>.</p>";
+            }
+            $log_file = WP_CONTENT_DIR . '/uploads/wpstaging-logs/debug.log';
+            echo '<pre style="background:#fff;border:1px solid #ccc;padding:10px;max-height:200px;overflow:auto;">';
+            if(file_exists($log_file)){
+                echo esc_html(file_get_contents($log_file));
+            }else{
+                echo $lang=="de"?'Noch keine Log-Einträge.':'No log entries yet.';
+            }
+            echo '</pre>';
+        }
+        // Schritt 4: Staging testen
+        if($step==4){
+            $staging_url = content_url('uploads/wpstaging/');
+            if($lang=="de"){
+                echo "<h2>Staging-Umgebung testen</h2><p>Die Staging-Umgebung ist jetzt einsatzbereit. Du findest sie unter: <a href='".esc_url($staging_url)."' target='_blank'>".esc_html($staging_url)."</a></p><ul><li>Stelle sicher, dass <code>robots.txt</code> und <code>index.html</code> vorhanden sind.</li><li>Teste Änderungen, ohne die Live-Seite zu gefährden.</li><li>Für weitere Backups oder Excludes, wiederhole die vorherigen Schritte.</li></ul>";
+            }else{
+                echo "<h2>Test Staging Environment</h2><p>Your staging environment is ready. You can find it at: <a href='".esc_url($staging_url)."' target='_blank'>".esc_html($staging_url)."</a></p><ul><li>Ensure <code>robots.txt</code> and <code>index.html</code> exist.</li><li>Test changes safely without affecting your live site.</li><li>For more backups or excludes, repeat previous steps.</li></ul>";
+            }
+        }
+        // Navigation
+        echo '<div class="wpstaging-step-nav">';
+        if($step>1){
+            echo '<a href="'.esc_url($base_url.'&wpstaging_step='.($step-1)).'" class="button">'.($lang=="de"?"Zurück":"Back").'</a>';
+        }
+        if($step<4){
+            echo '<a href="'.esc_url($base_url.'&wpstaging_step='.($step+1)).'" class="button button-primary">'.($lang=="de"?"Weiter":"Next").'</a>';
+        }
+        echo '</div>';
+        ?>
+        </div>
+    </div>
+
         <h2>Debug Log</h2>
         <pre style="background:#f8f8f8; border:1px solid #ccc; padding:10px; max-height:200px; overflow:auto;"><?php
         $log_file = WP_CONTENT_DIR . '/uploads/wpstaging-logs/debug.log';
