@@ -1,0 +1,6 @@
+# Ignore logs and OS files
+wpstaging-logs/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
