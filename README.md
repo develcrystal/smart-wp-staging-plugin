@@ -1,38 +1,37 @@
-# WP Staging Lite
+# WordPress Staging mit Docker & Web-UI
 
-**Version:** 1.0.2  
-
-_Developed by Romain Hill, AI Developer_
+Dieses Projekt stellt eine professionelle Staging-Umgebung für WordPress bereit – inklusive moderner Weboberfläche, automatischer Synchronisation und Git-Integration.
 
 ## Features
-- 1‑Klick‑Staging‑Umgebung für WordPress
-- Backup-Exclude-UI (Verzeichnisse/Dateien ausschließen)
-- Debug-Logging (`wp-content/uploads/wpstaging-logs/debug.log`)
-- Schutz vor Suchmaschinen (robots.txt, Meta-Tag)
-- Admin-Notices, Fallbacks, Lade-Spinner für bessere UX
+- **Live & Staging:** Vollständig getrennte WordPress-Instanzen (inkl. Datenbanken)
+- **Sync-Service:** Automatische Synchronisation (Dateien & DB) von Live → Staging
+- **Web-UI:** Moderne Admin-Oberfläche (React) zur Steuerung und Übersicht
+- **Sicherheit:** Passwortschutz, IP-Restriktion, HTTPS (Traefik)
+- **Git-Integration:** Änderungen im Staging können versioniert werden
 
-## Installation
-1. Kopiere den Ordner `wp-staging-lite` nach `/wp-content/plugins/`
-2. Aktiviere das Plugin im WordPress-Backend
+## Schnellstart
+```bash
+git clone <REPO-URL>
+cd wp-staging-docker
+cp .env.example .env
+docker-compose up -d
+```
 
-## Benutzung
-- Menüpunkt „WP Staging Lite“ im Admin-Bereich
-- Button „Staging erstellen“ erzeugt Staging-Verzeichnis inkl. robots.txt und index.html
-- Excludes im Textfeld eintragen und speichern
-- Log-Ausgabe direkt im Admin-Bereich einsehbar
+Web-UI: [http://localhost:8080](http://localhost:8080)
 
-## Release-Historie
-### v1.0.2
-- UI für Excludes und Logging
-- UX-Optimierungen (Notices, Spinner)
-- Automatisierte Tests und Dokumentation
+## Projektstruktur
+- `admin-ui/` – Web-UI (React)
+- `live/` – Live-WordPress-Daten
+- `staging/` – Staging-WordPress-Daten
+- `db_live/`, `db_staging/` – Datenbankdaten
+- `sync-script.sh` – Synchronisationsskript
+- `docker-compose.yml` – Docker Setup
+- `.env` – Zentrale Konfiguration
 
-### v1.0.1
-- Grundfunktion: 1-Klick-Staging, robots.txt, Meta-Tag
-
-## Entwickler
-- Autor: Romain Hill, AI Developer
-- Lizenz: GPL2
+## Sicherheit & Hinweise
+- Passwörter und Secrets **nur** in `.env` pflegen!
+- Staging ist durch Traefik und robots.txt geschützt.
 
 ---
-Dieses Plugin wurde mit KI-Unterstützung entwickelt und automatisiert getestet.
+
+Für individuelle Anpassungen: Siehe Dokumentation oder kontaktiere den Entwickler.

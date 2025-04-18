@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=mail@example.com
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.http.routers.api.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.api.service=api@internal"
+
+  wordpress_live:
+    image: wordpress:php8.2-apache
+    depends_on:
+      - db_live
+    environment:
+      WORDPRESS_DB_HOST: db_live
+      WORDPRESS_DB_NAME: wp_live
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+    volumes:
+      - ./live:/var/www/html
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wp-live.rule=Host(`live.${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.wp-live.entrypoints=web,websecure"
+
+  wordpress_staging:
+    image: wordpress:php8.2-apache
+    depends_on:
+      - db_staging
+    environment:
+      WORDPRESS_DB_HOST: db_staging
+      WORDPRESS_DB_NAME: wp_staging
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+    volumes:
+      - ./staging:/var/www/html
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wp-staging.rule=Host(`staging.${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.wp-staging.entrypoints=web,websecure"
+      - "traefik.http.routers.wp-staging.middlewares=staging-auth"
+      - "traefik.http.middlewares.staging-auth.basicauth.users=${BASIC_AUTH_USER}:${BASIC_AUTH_PASSWORD}"
+
+  db_live:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: wp_live
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+    volumes:
+      - ./db_live:/var/lib/mysql
+
+  db_staging:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: wp_staging
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+    volumes:
+      - ./db_staging:/var/lib/mysql
+
+  sync_service:
+    image: alpine
+    depends_on:
+      - wordpress_live
+      - wordpress_staging
+      - db_live
+      - db_staging
+    volumes:
+      - ./sync-script.sh:/sync.sh
+      - ./live:/live
+      - ./staging:/staging
+    environment:
+      DB_PASS: ${WORDPRESS_DB_PASSWORD}
+    command: sh -c "chmod +x /sync.sh && while true; do /sync.sh; sleep ${SYNC_INTERVAL}; done"
+
+  admin_panel:
+    build: ./admin-ui
+    ports:
+      - "8080:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin.rule=Host(`${TRAEFIK_ADMIN_DOMAIN}`)"
+      - "traefik.http.routers.admin.entrypoints=web,websecure"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - sync_service
+    volumes:
+      - ./admin-ui/build:/usr/share/nginx/html:ro
